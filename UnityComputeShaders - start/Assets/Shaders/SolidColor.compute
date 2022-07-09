@@ -1,13 +1,88 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel CSMain
+#pragma kernel SolidRed
+#pragma kernel SolidYellow
+#pragma kernel SplitScreen
+#pragma kernel Circle
+#pragma kernel Square
+#pragma kernel Test
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 RWTexture2D<float4> Result;
+int texResolution;
 
 [numthreads(8,8,1)]
-void CSMain (uint3 id : SV_DispatchThreadID)
+void SolidRed (uint3 id : SV_DispatchThreadID)
 {
      Result[id.xy] = float4(1.0, 0.0, 0.0, 1.0);
 }
 
+[numthreads(8,8,1)]
+void SolidYellow (uint3 id : SV_DispatchThreadID)
+{
+     Result[id.xy] = float4(1.0, 1.0, 0.0, 1.0);
+}
+
+[numthreads(8,8,1)]
+void SplitScreen (uint3 id : SV_DispatchThreadID)
+{
+    // bit shifting, move to the right = divide value by 2
+    //1 0 0 0 0 0 0 0 = 256
+    //  1 0 0 0 0 0 0 = 128
+    int halfRes = texResolution >> 1;
+
+    // step(edge, x) return (x >= edge) ? 1 : 0;
+    Result[id.xy] = float4(step(halfRes, id.x), step(halfRes, id.y), 0.0, 1.0);
+
+    // example
+    // GroupID    = (20, 10, 0)
+    // ThreadID   = ( 4,  5, 0) => this define the offset inside the 8x8x1 matrix of the GroupID
+    // numthreads = ( 8,  8, 1)
+    // DispatchThreadID = (GroupID * numthreads) + ThreadID 
+    //                  = ((20, 10, 0) * (8, 8, 1)) + (4, 5, 0)
+    //                  = ((20 * 8 + 4), (10 * 8 + 5), (0 * 1 + 0))
+    //                  = (164, 85, 0)
+    // if halfRes = 128
+    // so:
+    // id.x > halfRes.x && id.y < halfRes
+    // so the color apply the step function on that pixel is:
+    //       id.x id.y
+    // Color(1.0, 0.0, 0.0, 1.0)
+}
+
+float InCircle(float2 pt, float radius)
+{
+    return (length(pt) < radius) ? 1.0 : 0.0;
+}
+
+[numthreads(8,8,1)]
+void Circle (uint3 id : SV_DispatchThreadID)
+{
+    float halfRes = texResolution >> 1;
+
+    // point to test
+    float radius = (float)(texResolution >> 2);
+    float res = InCircle((float2)((int2)id.xy - halfRes), radius);
+
+    Result[id.xy] = float4(res, res, 0.0, 1.0);
+}
+
+[numthreads(8,8,1)]
+void Square (uint3 id : SV_DispatchThreadID)
+{
+    float halfRes = texResolution >> 1;
+
+    // point to test
+     float radius = (float)(texResolution >> 2);
+    // float res = InCircle((float2)((int2)id.xy - halfRes), radius);
+
+    Result[id.xy] = float4(0.0, 0.0, id.x > radius && id.y > radius, 1.0);
+}
+
+[numthreads(8,8,1)]
+void Test (uint3 id : SV_DispatchThreadID)
+{
+     //Result[id.xy] = float4(1.0, (id.x > 128) ? 1 : 0, 0.0, 1.0);
+     //Result[id.xy] = float4((id.x > 128) ? 1 : 0, 1.0, 0.0, 1.0);
+     Result[id.xy] = float4((id.x > 128) ? 1 : 0, (id.x > 128) ? 1 : 0, 0.0, 1.0);
+}
