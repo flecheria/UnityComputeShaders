@@ -1,6 +1,6 @@
 # UnityComputeShaders
 
-Resources from my Udemy course on ComputeShader plus personal experiment around that.
+Resources from my Udemy course on ComputeShader plus personal experiments around that.
 
 ## Scene reference
 
