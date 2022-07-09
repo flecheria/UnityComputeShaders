@@ -11,6 +11,7 @@ public class PassData : MonoBehaviour
     RenderTexture outputTexture;
 
     int circlesHandle;
+    int clearHandle;
 
     public Color clearColor = new Color();
     public Color circleColor = new Color();
@@ -31,21 +32,41 @@ public class PassData : MonoBehaviour
     private void InitShader()
     {
         circlesHandle = shader.FindKernel("Circles");
+        clearHandle = shader.FindKernel("Clear");
 
         shader.SetInt( "texResolution", texResolution);
-        shader.SetTexture( circlesHandle, "Result", outputTexture);
+        shader.SetVector("clearColor", clearColor);
+        shader.SetVector("circleColor", circleColor);
+
+        shader.SetTexture(circlesHandle, "Result", outputTexture);
+        shader.SetTexture(clearHandle, "Result", outputTexture);
 
         rend.material.SetTexture("_MainTex", outputTexture);
     }
  
-    private void DispatchKernel(int count)
+    private void DispatchKernels(int count)
     {
+        shader.Dispatch(clearHandle, texResolution / 8, texResolution / 8, 1);
+
+        // set time every single running phase of the shader to get animation
+        shader.SetFloat("time", Time.time);
         shader.Dispatch(circlesHandle, count, 1, 1);
+
+        // how many times the sjader kernel run?
+        // Dispatch GroupID (1,1,1) = 1 * 1 * 1 = 1
+        // Threads (1, 1, 1) = 1 * 1 * 1 = 1
+        // Total run = Dispatch Group * Threads = 1 * 1 = 1
     }
 
     void Update()
     {
-        DispatchKernel(1);
+        // the integer value decide how many time the shader run
+        DispatchKernels(10);
+    }
+
+    private void OnDestroy()
+    {
+        outputTexture.Release();
     }
 }
 

@@ -1,0 +1,31 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Spheres
+#pragma kernel SpheresMoving
+
+// INCLUDE EXTERNAL LIBRARY FOR NOISE FUNCTIONS
+#include "WhiteNoise.cginc"
+
+//variable
+RWStructuredBuffer<float3> Result;
+uniform float time;
+
+[numthreads(64,1,1)]
+void Spheres (uint3 id : SV_DispatchThreadID)
+{
+    Result[id.x] = float3(id.x, 0, 0);
+}
+
+[numthreads(64,1,1)]
+void SpheresMoving (uint3 id : SV_DispatchThreadID)
+{
+    //generate 2 orthogonal vectors
+    float3 baseDir = normalize(rand1dTo3d(id.x) - 0.5) * (rand1dTo1d(id.x) * 0.9 + 0.1);
+    float3 orthogonal = normalize(cross(baseDir, rand1dTo3d(id.x + 7.1393) - 0.5)) * (rand1dTo1d(id.x + 3.7443) * 0.9 + 0.1);
+
+    //scale the time and give it a random offset
+    float scaledTime = time * 2 + rand1dTo1d(id.x) * 712.131234;
+    
+    //calculate a vector based on vectors
+    float3 dir = baseDir * sin(scaledTime) + orthogonal * cos(scaledTime);
+    Result[id.x] = dir * 20;
+}
